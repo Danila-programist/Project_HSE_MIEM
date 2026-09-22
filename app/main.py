@@ -17,7 +17,7 @@ from .routers import (
 from . import web
 
 def feature():
-    # BAD CODE
+    # GOOD CODE
     return False
 
 app = FastAPI(
