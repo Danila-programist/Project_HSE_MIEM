@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ИСУДО{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ИСУДО</a>
+    <span class="subtitle">{% block subtitle %}{% endblock %}</span>
+    <span class="spacer"></span>
+    <span class="user">
+      {% if user %}
+        {{ user.fullName }} ({{ user.role }}{% if user.node %}, {{ user.node.name }}{% endif %})
+        <button id="logout-btn" class="link">Выйти</button>
+      {% else %}
+        <a href="/login">Войти</a>
+      {% endif %}
+    </span>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

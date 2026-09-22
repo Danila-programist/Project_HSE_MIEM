@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: isudo
+      POSTGRES_PASSWORD: isudo
+      POSTGRES_DB: isudo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isudo -d isudo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://isudo:isudo@db:5432/isudo
+      SESSION_COOKIE_SECURE: "false"
+      SESSION_TTL_HOURS: "24"
+      LOG_LEVEL: INFO
+      ADMIN_LOGIN: admin
+      ADMIN_PASSWORD: admin12345
+      ADMIN_FULL_NAME: Администратор
+    ports:
+      - "8443:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Сортировочный центр — ИСУДО{% endblock %}
+{% block subtitle %}Сотрудник сортировочного центра{% endblock %}
+{% block content %}
+<section class="layout">
+  <aside class="col-list">
+    <div class="card">
+      <h2>Отправления</h2>
+      <form id="search-form" class="row">
+        <input name="trackNumber" placeholder="Поиск по трек-номеру" maxlength="64">
+        <button type="submit">Найти</button>
+      </form>
+      <div class="row">
+        <label class="inline">
+          <input type="radio" name="direction" value="ALL" checked> Все
+        </label>
+        <label class="inline">
+          <input type="radio" name="direction" value="AT_NODE"> В узле
+        </label>
+        <label class="inline">
+          <input type="radio" name="direction" value="INCOMING"> Ожидаются
+        </label>
+      </div>
+      <table class="table">
+        <thead><tr><th>Трек-номер</th><th>Статус</th><th></th></tr></thead>
+        <tbody id="shipments-body"></tbody>
+      </table>
+      <div class="pager">
+        <button id="prev-btn">Назад</button>
+        <span id="page-info"></span>
+        <button id="next-btn">Вперёд</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="col-detail">
+    <div id="detail" class="card">
+      <p class="hint">Выберите отправление.</p>
+    </div>
+  </section>
+</section>
+
+<script id="page-data" type="application/json">
+  {{ {"role": "sorter", "user": user} | tojson }}
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/sorter.js"></script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Администратор — ИСУДО{% endblock %}
+{% block subtitle %}Администратор{% endblock %}
+{% block content %}
+<section class="layout">
+  <aside class="col-list">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="users">Сотрудники</button>
+        <button class="tab" data-tab="nodes">Узлы доставки</button>
+      </div>
+
+      <div id="tab-users">
+        <div class="row">
+          <button id="new-user-btn" class="primary">Создать сотрудника</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>Логин</th><th>Роль</th><th>Узел</th><th>Состояние</th></tr></thead>
+          <tbody id="users-body"></tbody>
+        </table>
+      </div>
+
+      <div id="tab-nodes" hidden>
+        <div class="row">
+          <button id="new-node-btn" class="primary">Создать узел</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>Название</th><th>Тип</th><th>Адрес</th><th>Активен</th></tr></thead>
+          <tbody id="nodes-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+
+  <section class="col-detail">
+    <div id="detail" class="card">
+      <p class="hint">Выберите запись для редактирования.</p>
+    </div>
+  </section>
+</section>
+
+<dialog id="user-dialog">
+  <form id="user-form" method="dialog" class="dialog-form">
+    <h2 id="user-dialog-title">Сотрудник</h2>
+    <input type="hidden" name="id">
+    <label>Логин<input name="login" required minlength="3" maxlength="50" pattern="[A-Za-z0-9._\-]+"></label>
+    <label>ФИО<input name="fullName" required maxlength="200"></label>
+    <label>Роль
+      <select name="role" required>
+        <option value="OPERATOR">Оператор пункта обслуживания</option>
+        <option value="SORTING_EMPLOYEE">Сотрудник сортировочного центра</option>
+        <option value="ADMIN">Администратор</option>
+      </select>
+    </label>
+    <label>Узел<select name="nodeId"></select></label>
+    <label id="password-field">Пароль<input name="password" type="password" minlength="8" maxlength="128"></label>
+    <div class="row">
+      <button type="button" id="user-cancel" class="link">Отмена</button>
+      <span class="spacer"></span>
+      <button type="submit" class="primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="node-dialog">
+  <form id="node-form" method="dialog" class="dialog-form">
+    <h2 id="node-dialog-title">Узел</h2>
+    <input type="hidden" name="id">
+    <label>Название<input name="name" required maxlength="200"></label>
+    <label>Тип
+      <select name="type" required>
+        <option value="SERVICE_POINT">Пункт обслуживания</option>
+        <option value="SORTING_CENTER">Сортировочный центр</option>
+      </select>
+    </label>
+    <label>Адрес<input name="address" required maxlength="500"></label>
+    <div class="row">
+      <button type="button" id="node-cancel" class="link">Отмена</button>
+      <span class="spacer"></span>
+      <button type="submit" class="primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="password-dialog">
+  <form id="password-form" method="dialog" class="dialog-form">
+    <h2>Новый пароль</h2>
+    <input type="hidden" name="id">
+    <label>Пароль<input name="newPassword" type="password" required minlength="8" maxlength="128"></label>
+    <div class="row">
+      <button type="button" id="password-cancel" class="link">Отмена</button>
+      <span class="spacer"></span>
+      <button type="submit" class="primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<script id="page-data" type="application/json">
+  {{ {"role": "admin", "user": user} | tojson }}
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/admin.js"></script>
+{% endblock %}

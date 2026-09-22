@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Отслеживание — ИСУДО{% endblock %}
+{% block subtitle %}Отслеживание отправлений{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Отследить отправление</h1>
+  <form id="track-form" class="row">
+    <input name="track" required maxlength="64" placeholder="Введите трек-номер" autocomplete="off">
+    <button type="submit" class="primary">Отследить</button>
+  </form>
+
+  <div id="result" hidden>
+    <div class="status-banner">
+      <div class="status-name" id="status-name"></div>
+      <div class="status-meta" id="status-meta"></div>
+    </div>
+    <h2>История движения</h2>
+    <table class="table">
+      <thead><tr><th>Дата и время</th><th>Событие</th><th>Узел</th></tr></thead>
+      <tbody id="events-body"></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('track-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const tn = e.target.track.value;
+    try {
+      const data = await api('GET', `/public/tracking/${encodeURIComponent(tn)}`);
+      render(data);
+    } catch (err) {
+      document.getElementById('result').hidden = true;
+      toast(err.message || 'Отправление не найдено', 'error');
+    }
+  });
+
+  function render(data) {
+    document.getElementById('result').hidden = false;
+    document.getElementById('status-name').textContent = data.statusName;
+    const meta = [`Последнее местонахождение: ${data.currentNodeName}`];
+    if (data.nextNodeName) meta.push(`В пути: ${data.currentNodeName} → ${data.nextNodeName}`);
+    document.getElementById('status-meta').textContent = meta.join(' · ');
+
+    const tbody = document.getElementById('events-body');
+    tbody.innerHTML = '';
+    for (const e of data.events) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${fmtDate(e.occurredAt)}</td><td>${e.statusName}</td><td>${e.nodeName}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+</script>
+{% endblock %}

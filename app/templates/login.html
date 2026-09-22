@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Вход — ИСУДО{% endblock %}
+{% block subtitle %}Вход в систему{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Вход</h1>
+  <form id="login-form" autocomplete="on">
+    <label>Логин
+      <input name="login" required maxlength="50" autocomplete="username">
+    </label>
+    <label>Пароль
+      <input name="password" type="password" required maxlength="128" autocomplete="current-password">
+    </label>
+    <button type="submit" class="primary">Войти</button>
+    <p class="hint">Клиент может отследить отправление <a href="/tracking">без входа</a>.</p>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      const user = await api('POST', '/auth/login', {
+        login: fd.get('login'),
+        password: fd.get('password'),
+      });
+      if (user.role === 'ADMIN') location.href = '/admin';
+      else if (user.role === 'OPERATOR') location.href = '/operator';
+      else location.href = '/sorter';
+    } catch (err) {
+      toast(err.message || 'Ошибка входа', 'error');
+    }
+  });
+</script>
+{% endblock %}

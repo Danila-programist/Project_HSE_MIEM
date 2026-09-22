@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Оператор — ИСУДО{% endblock %}
+{% block subtitle %}Оператор пункта обслуживания{% endblock %}
+{% block content %}
+<section class="layout">
+  <aside class="col-list">
+    <div class="card">
+      <h2>Отправления</h2>
+      <form id="search-form" class="row">
+        <input name="trackNumber" placeholder="Поиск по трек-номеру" maxlength="64">
+        <button type="submit">Найти</button>
+      </form>
+      <div class="row">
+        <button id="reset-btn" class="link">Сбросить</button>
+        <span class="spacer"></span>
+        <button id="new-shipment-btn" class="primary">Оформить отправление</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>Трек-номер</th><th>Статус</th><th></th></tr></thead>
+        <tbody id="shipments-body"></tbody>
+      </table>
+      <div class="pager">
+        <button id="prev-btn">Назад</button>
+        <span id="page-info"></span>
+        <button id="next-btn">Вперёд</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="col-detail">
+    <div id="detail" class="card">
+      <p class="hint">Выберите отправление или оформите новое.</p>
+    </div>
+  </section>
+</section>
+
+<dialog id="create-dialog">
+  <form id="create-form" method="dialog" class="dialog-form">
+    <h2>Оформление отправления</h2>
+    <div class="grid2">
+      <label>ФИО отправителя<input name="sender.fullName" required maxlength="200"></label>
+      <label>Телефон отправителя<input name="sender.phone" required placeholder="+7 916 123-45-67"></label>
+      <label>ФИО получателя<input name="recipient.fullName" required maxlength="200"></label>
+      <label>Телефон получателя<input name="recipient.phone" required placeholder="+7 916 123-45-67"></label>
+      <label>Пункт назначения<select name="destinationNodeId" required></select></label>
+      <label>Тип отправления<select name="shipmentTypeId" required></select></label>
+      <label>Масса, кг<input name="weightKg" type="number" step="0.001" min="0.001" max="1000" required></label>
+      <label>Длина, см<input name="lengthCm" type="number" step="0.01" min="0.01" max="1000" required></label>
+      <label>Ширина, см<input name="widthCm" type="number" step="0.01" min="0.01" max="1000" required></label>
+      <label>Высота, см<input name="heightCm" type="number" step="0.01" min="0.01" max="1000" required></label>
+    </div>
+    <label>Описание содержимого<input name="description" maxlength="200"></label>
+    <div class="row">
+      <button type="button" id="create-cancel" class="link">Отмена</button>
+      <span class="spacer"></span>
+      <button type="submit" class="primary">Оформить</button>
+    </div>
+  </form>
+</dialog>
+
+<script id="page-data" type="application/json">
+  {{ {"role": "operator", "user": user} | tojson }}
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/operator.js"></script>
+{% endblock %}
