@@ -1,0 +1,4 @@
+tests/__pycache__/
+docs/superpowers/
+app/__pycache__/
+app/routers/__pycache__/

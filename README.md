@@ -58,3 +58,14 @@ http://localhost:8443/login — вход (admin / admin12345)
 http://localhost:8443/docs — Swagger
 
 http://localhost:8443/health — health
+
+## Тесты
+
+Тесты используют настоящий PostgreSQL (модели используют `ENUM`-типы и
+`SELECT ... FOR UPDATE`, которые SQLite не поддерживает корректно).
+
+    docker compose up -d db
+    docker compose exec db createdb -U isudo isudo_test  # один раз
+
+    pip install -r requirements.txt -r requirements-dev.txt
+    TEST_DATABASE_URL=postgresql+psycopg://isudo:isudo@localhost:5432/isudo_test python -m pytest -v
