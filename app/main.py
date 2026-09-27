@@ -20,15 +20,6 @@ from .routers import (
 )
 from . import web
 
-## @brief Возвращает значение демонстрационной заглушки.
-#
-# Функция не подключена к HTTP-маршрутам и не участвует в доставке.
-#
-# @return Всегда False.
-def feature():
-    # GOOD CODE
-    return False
-
 app = FastAPI(
     title="ИСУДО — Информационная система управления доставкой отправлений",
     version="1.0.0",
