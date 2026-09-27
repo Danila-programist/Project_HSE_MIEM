@@ -1,3 +1,7 @@
+## @file
+# @brief Вход, выход и профиль текущего сотрудника.
+#
+# Вход создаёт серверную сессию и HttpOnly cookie. Выход удаляет запись сессии и cookie.
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -18,6 +22,15 @@ from ..serializers import node_ref
 router = APIRouter(tags=["Аутентификация"])
 
 
+## @brief Проверяет учётные данные и открывает сессию.
+#
+# Создаёт случайный идентификатор, срок действия и HttpOnly cookie с настройками приложения.
+#
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return UserProfile; cookie добавляется в HTTP-ответ.
+# @exception errors.APIError 401 при неверных данных; 403 при блокировке.
 @router.post("/auth/login", response_model=UserProfile)
 def login(payload: LoginRequest, response: Response, db: Annotated[Session, Depends(get_db)]):
     emp = db.execute(select(Employee).where(Employee.login == payload.login)).scalar_one_or_none()
@@ -49,6 +62,14 @@ def login(payload: LoginRequest, response: Response, db: Annotated[Session, Depe
     )
 
 
+## @brief Завершает сессию сотрудника.
+#
+# Удаляет запись сессии, если она существует, и очищает cookie. Допускает вызов без сессии.
+#
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param session_id Идентификатор сессии из cookie SESSION.
+# @note Возвращает None; HTTP 204.
 @router.post("/auth/logout", status_code=204)
 def logout(
     response: Response,
@@ -63,6 +84,12 @@ def logout(
     response.delete_cookie(settings.session_cookie_name, path="/")
 
 
+## @brief Возвращает профиль текущего сотрудника.
+#
+# Текущий пользователь уже проверен зависимостью CurrentUser.
+#
+# @param user Текущий сотрудник.
+# @return Модель UserProfile без пароля.
 @router.get("/auth/me", response_model=UserProfile)
 def me(user: CurrentUser):
     return UserProfile(

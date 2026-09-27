@@ -1,3 +1,7 @@
+## @file
+# @brief Окружение миграций Alembic.
+#
+# Подключает метаданные ORM и выбирает онлайн- или офлайн-режим. DATABASE_URL переопределяет URL конфигурации.
 import os
 from logging.config import fileConfig
 
@@ -19,6 +23,11 @@ if database_url:
 target_metadata = Base.metadata
 
 
+## @brief Готовит миграции без подключения к БД.
+#
+# Конфигурирует Alembic для SQL-вывода с литеральными параметрами.
+#
+# @note Возвращает None.
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -32,6 +41,11 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+## @brief Применяет миграции через подключение к БД.
+#
+# Создаёт engine с NullPool и запускает миграции в транзакции Alembic.
+#
+# @note Возвращает None.
 def run_migrations_online() -> None:
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),

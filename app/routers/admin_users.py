@@ -1,3 +1,7 @@
+## @file
+# @brief Управление учётными записями сотрудников.
+#
+# Роутер требует ADMIN; проверяет соответствие роли типу узла и сохраняет последнего активного администратора.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -16,10 +20,26 @@ from ..serializers import employee_to_user_payload
 router = APIRouter(tags=["Администрирование сотрудников"], dependencies=[Depends(require_roles(Role.ADMIN))])
 
 
+## @brief Преобразует сотрудника в административную карточку.
+#
+# Использует общий сериализатор без пароля и его хеша.
+#
+# @param emp ORM-запись сотрудника.
+# @return Модель User.
 def _user(emp: Employee) -> User:
     return User(**employee_to_user_payload(emp))
 
 
+## @brief Проверяет соответствие роли выбранному узлу.
+#
+# Администратору узел не назначается; оператору нужен активный пункт, сортировщику — активный центр.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param role Роль сотрудника.
+# @param node_id Идентификатор узла или None.
+# @param require Требовать ли обязательное назначение узла.
+# @return Идентификатор подходящего узла либо None.
+# @exception errors.APIError 400 при отсутствии или несовместимости узла.
 def _validate_role_node(db: Session, role: Role, node_id: int | None, *, require: bool) -> int | None:
     if role == Role.ADMIN:
         return None
@@ -49,6 +69,13 @@ def _validate_role_node(db: Session, role: Role, node_id: int | None, *, require
     return node.id
 
 
+## @brief Считает активных администраторов.
+#
+# При необходимости исключает одного сотрудника для проверки возможности изменения его роли или блокировки.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param exclude_id Идентификатор исключаемого сотрудника или None.
+# @return Количество незаблокированных администраторов.
 def _active_admin_count(db: Session, exclude_id: int | None = None) -> int:
     stmt = select(func.count()).select_from(Employee).where(
         Employee.role == Role.ADMIN, Employee.blocked.is_(False)
@@ -58,6 +85,16 @@ def _active_admin_count(db: Session, exclude_id: int | None = None) -> int:
     return db.scalar(stmt) or 0
 
 
+## @brief Возвращает страницу сотрудников.
+#
+# Фильтрует по роли и блокировке, сортирует по идентификатору.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param role Фильтр по роли либо None.
+# @param blocked Фильтр по блокировке; None отключает фильтр.
+# @param page Номер страницы, начиная с 1.
+# @param size Максимальное число элементов страницы (1–100 в API).
+# @return UserPage с элементами и метаданными пагинации.
 @router.get("/admin/users", response_model=UserPage)
 def list_users(
     db: Annotated[Session, Depends(get_db)],
@@ -84,6 +121,15 @@ def list_users(
     )
 
 
+## @brief Создаёт сотрудника с хешированным паролем.
+#
+# Проверяет уникальность логина и совместимость роли с узлом; устанавливает Location.
+#
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Созданная модель User; HTTP 201.
+# @exception errors.APIError 409 при занятом логине; 400 при недопустимом назначении узла.
 @router.post("/admin/users", response_model=User, status_code=201)
 def create_user(payload: UserCreate, response: Response, db: Annotated[Session, Depends(get_db)]):
     if db.scalar(select(Employee).where(Employee.login == payload.login)):
@@ -107,6 +153,14 @@ def create_user(payload: UserCreate, response: Response, db: Annotated[Session, 
     return _user(emp)
 
 
+## @brief Возвращает карточку сотрудника по идентификатору.
+#
+# Доступ ограничен административной зависимостью роутера.
+#
+# @param userId Идентификатор сотрудника.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Модель User.
+# @exception errors.APIError 404 при отсутствии сотрудника.
 @router.get("/admin/users/{userId}", response_model=User)
 def get_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
@@ -115,6 +169,15 @@ def get_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     return _user(emp)
 
 
+## @brief Обновляет учётную запись сотрудника.
+#
+# Проверяет логин и назначение узла; запрещает лишать роли последнего активного администратора.
+#
+# @param userId Идентификатор сотрудника.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Обновлённая модель User.
+# @exception errors.APIError 404 при отсутствии сотрудника; 400 при неверном узле; 409 при конфликте логина или последнем администраторе.
 @router.patch("/admin/users/{userId}", response_model=User)
 def update_user(userId: int, payload: UserUpdate, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
@@ -150,6 +213,14 @@ def update_user(userId: int, payload: UserUpdate, db: Annotated[Session, Depends
     return _user(emp)
 
 
+## @brief Блокирует сотрудника.
+#
+# Последний активный администратор защищён от блокировки. API проверит blocked при следующем запросе.
+#
+# @param userId Идентификатор сотрудника.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Модель User с blocked=True.
+# @exception errors.APIError 404 при отсутствии сотрудника; 409 при блокировке последнего администратора.
 @router.post("/admin/users/{userId}/block", response_model=User)
 def block_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
@@ -163,6 +234,14 @@ def block_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     return _user(emp)
 
 
+## @brief Снимает блокировку сотрудника.
+#
+# Меняет флаг blocked, не изменяя роль, пароль или назначенный узел.
+#
+# @param userId Идентификатор сотрудника.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Модель User с blocked=False.
+# @exception errors.APIError 404 при отсутствии сотрудника.
 @router.post("/admin/users/{userId}/unblock", response_model=User)
 def unblock_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
@@ -174,6 +253,15 @@ def unblock_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     return _user(emp)
 
 
+## @brief Задаёт новый пароль сотруднику.
+#
+# Сохраняет новый хеш. Существующие сессии эта функция не удаляет.
+#
+# @param userId Идентификатор сотрудника.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @note Возвращает None; HTTP 204.
+# @exception errors.APIError 404 при отсутствии сотрудника.
 @router.put("/admin/users/{userId}/password", status_code=204)
 def set_password(userId: int, payload: PasswordSet, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)

@@ -1,3 +1,7 @@
+## @file
+# @brief Переходы состояний отправления.
+#
+# Обработчики проверяют роль, узел и статус, запрашивают блокировку строки и сохраняют изменение с событием одной транзакцией.
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -16,6 +20,14 @@ from ..serializers import shipment_card
 router = APIRouter(tags=["Операции"])
 
 
+## @brief Загружает отправление с блокировкой для изменения.
+#
+# Запрашивает SELECT FOR UPDATE в текущей транзакции. Отсутствующая запись приводит к ошибке 404.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param shipment_id Идентификатор отправления.
+# @return ORM-объект Shipment.
+# @exception errors.APIError 404 при отсутствии отправления.
 def _lock(db: Session, shipment_id: int) -> Shipment:
     s = db.execute(select(Shipment).where(Shipment.id == shipment_id).with_for_update()).scalar_one_or_none()
     if s is None:
@@ -23,6 +35,14 @@ def _lock(db: Session, shipment_id: int) -> Shipment:
     return s
 
 
+## @brief Проверяет тип и непустой номер документа.
+#
+# Проверяет существование типа в справочнике и номер после удаления внешних пробелов.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param doc_in Реквизиты документа из запроса.
+# @return Найденная запись DocumentType.
+# @exception errors.APIError 400 при неизвестном типе или пустом номере.
 def _validate_document(db: Session, doc_in) -> DocumentType:
     dt = db.get(DocumentType, doc_in.documentTypeId)
     if dt is None:
@@ -38,6 +58,16 @@ def _validate_document(db: Session, doc_in) -> DocumentType:
     return dt
 
 
+## @brief Регистрирует фактический приём отправления.
+#
+# Оператор пункта приёма переводит CREATED в ACCEPTED. Реквизиты отправителя, время и событие сохраняются вместе со статусом.
+#
+# @param shipmentId Идентификатор отправления.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard после приёма с данными участников.
+# @exception errors.APIError 403 при чужом узле или роли; 404 при отсутствии; 409 при неверном статусе; 400 при неверном документе.
 @router.post("/shipments/{shipmentId}/accept", response_model=ShipmentCard)
 def accept_shipment(
     shipmentId: int, payload: AcceptRequest, user: CurrentUser, db: Annotated[Session, Depends(get_db)]
@@ -80,6 +110,16 @@ def accept_shipment(
     return shipment_card(s, for_operator=True)
 
 
+## @brief Отправляет посылку в выбранный следующий узел.
+#
+# Из ACCEPTED действие выполняет оператор пункта приёма, из ARRIVED — сортировщик текущего узла. Следующий узел должен быть активным центром или пунктом назначения.
+#
+# @param shipmentId Идентификатор отправления.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard в состоянии DISPATCHED.
+# @exception errors.APIError 403 при неверной роли или узле; 404 при отсутствии; 409 при неверном статусе; 400 при недопустимом следующем узле.
 @router.post("/shipments/{shipmentId}/dispatch", response_model=ShipmentCard)
 def dispatch_shipment(
     shipmentId: int, payload: DispatchRequest, user: CurrentUser, db: Annotated[Session, Depends(get_db)]
@@ -129,6 +169,15 @@ def dispatch_shipment(
     return shipment_card(s, for_operator=(user.role == Role.OPERATOR))
 
 
+## @brief Регистрирует прибытие в выбранный узел.
+#
+# Сотрудник следующего узла принимает DISPATCHED. В пункте назначения устанавливается READY_FOR_PICKUP, иначе ARRIVED; next_node_id очищается.
+#
+# @param shipmentId Идентификатор отправления.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard с новым текущим узлом.
+# @exception errors.APIError 403 при неверной роли или узле; 404 при отсутствии; 409 при неверном статусе.
 @router.post("/shipments/{shipmentId}/arrive", response_model=ShipmentCard)
 def arrive_shipment(shipmentId: int, user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     if user.role not in (Role.OPERATOR, Role.SORTING_EMPLOYEE) or user.node_id is None:
@@ -159,6 +208,16 @@ def arrive_shipment(shipmentId: int, user: CurrentUser, db: Annotated[Session, D
     return shipment_card(s, for_operator=(user.role == Role.OPERATOR))
 
 
+## @brief Выдаёт отправление получателю.
+#
+# Оператор пункта назначения переводит READY_FOR_PICKUP в ISSUED; фиксирует документ получателя, фактическое время и событие выдачи.
+#
+# @param shipmentId Идентификатор отправления.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard в конечном состоянии ISSUED.
+# @exception errors.APIError 403 при неверной роли или узле; 404 при отсутствии; 409 при неверном статусе; 400 при неверном документе.
 @router.post("/shipments/{shipmentId}/issue", response_model=ShipmentCard)
 def issue_shipment(
     shipmentId: int, payload: IssueRequest, user: CurrentUser, db: Annotated[Session, Depends(get_db)]

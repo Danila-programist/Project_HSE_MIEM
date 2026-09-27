@@ -1,3 +1,7 @@
+## @file
+# @brief Создание первого администратора из окружения.
+#
+# Запускается как python -m seed. Существующая запись с тем же логином не изменяется.
 """Идемпотентно создаёт первого администратора, если заданы env-переменные."""
 import os
 
@@ -9,6 +13,11 @@ from .models import Employee
 from .security import hash_password
 
 
+## @brief Создаёт начального администратора при необходимости.
+#
+# Читает ADMIN_LOGIN, ADMIN_PASSWORD и ADMIN_FULL_NAME. Без логина или пароля, а также при существующем логине, ничего не создаёт.
+#
+# @note Возвращает None; при создании запись подтверждается в БД.
 def seed_admin() -> None:
     login = os.environ.get("ADMIN_LOGIN")
     password = os.environ.get("ADMIN_PASSWORD")

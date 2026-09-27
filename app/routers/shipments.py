@@ -1,3 +1,7 @@
+## @file
+# @brief Оформление, редактирование и чтение отправлений.
+#
+# Доступ ограничен ролью и связанным узлом. Исходные сведения изменяются только до фактического приёма.
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -30,6 +34,13 @@ from ..utils import generate_track_number, normalize_track_number
 router = APIRouter(tags=["Отправления"])
 
 
+## @brief Проверяет связь узла с карточкой отправления.
+#
+# Доступ дают пункт приёма, текущий или следующий узел; пункт назначения сам по себе не включён в эту проверку.
+#
+# @param shipment ORM-запись отправления.
+# @param node_id Идентификатор узла или None.
+# @return True, если узел входит в разрешённый набор.
 def _accessible(shipment: Shipment, node_id: int) -> bool:
     return node_id in {
         shipment.origin_node_id,
@@ -38,6 +49,14 @@ def _accessible(shipment: Shipment, node_id: int) -> bool:
     }
 
 
+## @brief Загружает отправление без блокировки.
+#
+# Использует первичный ключ; не выполняет проверку роли и узла.
+#
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param shipment_id Идентификатор отправления.
+# @return ORM-объект Shipment.
+# @exception errors.APIError 404 при отсутствии отправления.
 def _load_shipment(db: Session, shipment_id: int) -> Shipment:
     s = db.get(Shipment, shipment_id)
     if s is None:
@@ -45,6 +64,19 @@ def _load_shipment(db: Session, shipment_id: int) -> Shipment:
     return s
 
 
+## @brief Возвращает рабочий список отправлений узла.
+#
+# Показывает находящиеся в узле или входящие отправления. Выданные исключены; поиск по трек-номеру точный после нормализации.
+#
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @param trackNumber Трек-номер для точного поиска.
+# @param status Фильтр по состоянию либо None.
+# @param direction ALL, AT_NODE или INCOMING относительно узла сотрудника.
+# @param page Номер страницы, начиная с 1.
+# @param size Максимальное число элементов страницы (1–100 в API).
+# @return ShipmentPage с карточками списка и пагинацией.
+# @exception errors.APIError 403 при неподходящей роли или отсутствии назначенного узла.
 @router.get("/shipments", response_model=ShipmentPage)
 def list_shipments(
     user: CurrentUser,
@@ -101,6 +133,16 @@ def list_shipments(
     )
 
 
+## @brief Оформляет отправление и присваивает трек-номер.
+#
+# Оператор активного пункта выбирает другой активный пункт назначения. Создание записи и события CREATE подтверждается совместно; коллизия номера повторяется до восьми попыток.
+#
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard в состоянии CREATED; HTTP 201 и Location.
+# @exception errors.APIError 403 при недоступном пункте приёма; 400 при неверных справочниках; 409 при исчерпании попыток генерации номера.
 @router.post("/shipments", response_model=ShipmentCard, status_code=201)
 def create_shipment(
     payload: ShipmentCreate,
@@ -181,6 +223,15 @@ def create_shipment(
     return shipment_card(shipment, for_operator=True)
 
 
+## @brief Возвращает доступную сотруднику карточку.
+#
+# Разрешает оператора и сортировщика связанного узла; состав персональных данных определяется ролью.
+#
+# @param shipmentId Идентификатор отправления.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return ShipmentCard.
+# @exception errors.APIError 403 при отсутствии доступа; 404 при отсутствии отправления.
 @router.get("/shipments/{shipmentId}", response_model=ShipmentCard)
 def get_shipment(shipmentId: int, user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     if user.role not in (Role.OPERATOR, Role.SORTING_EMPLOYEE) or user.node_id is None:
@@ -191,6 +242,16 @@ def get_shipment(shipmentId: int, user: CurrentUser, db: Annotated[Session, Depe
     return shipment_card(s, for_operator=(user.role == Role.OPERATOR))
 
 
+## @brief Исправляет исходные данные до приёма.
+#
+# Только оператор пункта приёма может менять CREATED. При смене назначения адрес копируется из нового пункта.
+#
+# @param shipmentId Идентификатор отправления.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Обновлённая ShipmentCard.
+# @exception errors.APIError 403 при отсутствии доступа; 404 при отсутствии; 409 после приёма; 400 при неверных справочниках.
 @router.patch("/shipments/{shipmentId}", response_model=ShipmentCard)
 def update_shipment(
     shipmentId: int,
@@ -255,6 +316,15 @@ def update_shipment(
     return shipment_card(s, for_operator=True)
 
 
+## @brief Возвращает служебную историю отправления.
+#
+# Проверяет доступ к карточке; сортирует события по времени и идентификатору, включает сведения об исполнителе.
+#
+# @param shipmentId Идентификатор отправления.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Список ShipmentEvent из schemas.
+# @exception errors.APIError 403 при отсутствии доступа; 404 при отсутствии отправления.
 @router.get("/shipments/{shipmentId}/history", response_model=list[ShipmentEventSchema])
 def get_shipment_history(shipmentId: int, user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     if user.role not in (Role.OPERATOR, Role.SORTING_EMPLOYEE) or user.node_id is None:
@@ -275,6 +345,16 @@ def get_shipment_history(shipmentId: int, user: CurrentUser, db: Annotated[Sessi
     return [shipment_event(e) for e in rows]
 
 
+## @brief Возвращает доступные оператору реквизиты.
+#
+# Пункт приёма видит документ отправителя после приёма; пункт назначения — документ получателя после выдачи. Устанавливает Cache-Control: no-store.
+#
+# @param shipmentId Идентификатор отправления.
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param user Текущий сотрудник.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Requisites с разрешёнными документами.
+# @exception errors.APIError 403 при отсутствии прав или доступных документов; 404 при отсутствии отправления.
 @router.get("/shipments/{shipmentId}/requisites", response_model=Requisites)
 def get_requisites(shipmentId: int, response: Response, user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     if user.role != Role.OPERATOR or user.node_id is None:

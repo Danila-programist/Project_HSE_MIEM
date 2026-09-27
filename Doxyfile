@@ -1,0 +1,43 @@
+# Run from the repository root after creating build/doxygen: doxygen Doxyfile
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "ИСУДО"
+PROJECT_NUMBER         = 1.0.0
+PROJECT_BRIEF          = "Информационная система управления доставкой отправлений"
+OUTPUT_DIRECTORY       = build/doxygen
+OUTPUT_LANGUAGE        = Russian
+INPUT_ENCODING         = UTF-8
+INPUT                  = app alembic docs/doxygen
+FILE_PATTERNS          = *.py *.dox
+RECURSIVE              = YES
+# Doxygen 1.9.x needs ordinary assignments to discover PEP 526 fields.
+FILTER_PATTERNS        = *.py="python3 docs/tools/filter_python.py"
+FILTER_SOURCE_FILES    = NO
+EXCLUDE_PATTERNS       = */__pycache__/*
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = .
+OPTIMIZE_OUTPUT_JAVA   = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS     = NO
+SORT_MEMBER_DOCS       = NO
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW       = YES
+GENERATE_LATEX         = NO
+GENERATE_RTF           = YES
+RTF_OUTPUT             = rtf
+RTF_HYPERLINKS         = YES
+HAVE_DOT               = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+# PNG is supported by both HTML browsers and RTF readers.
+DOT_IMAGE_FORMAT       = png
+DOT_NUM_THREADS        = 2

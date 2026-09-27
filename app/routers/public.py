@@ -1,3 +1,7 @@
+## @file
+# @brief Публичное отслеживание без авторизации.
+#
+# Возвращает статус, названия узлов и хронологию событий без персональных данных участников и сотрудников.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -14,6 +18,14 @@ from ..utils import normalize_track_number
 router = APIRouter(tags=["Публичное отслеживание"])
 
 
+## @brief Находит отправление по публичному трек-номеру.
+#
+# Нормализует ввод; события сортируются по времени и идентификатору.
+#
+# @param trackNumber Трек-номер для точного поиска.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return PublicTracking без персональных данных.
+# @exception errors.APIError 404 при отсутствии отправления.
 @router.get("/public/tracking/{trackNumber}", response_model=PublicTracking)
 def track_shipment(trackNumber: str, db: Annotated[Session, Depends(get_db)]):
     tn = normalize_track_number(trackNumber)

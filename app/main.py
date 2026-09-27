@@ -1,3 +1,7 @@
+## @file
+# @brief Точка сборки приложения FastAPI.
+#
+# Подключает API под /api/v1, HTML-страницы, статические файлы и обработчики ошибок. Swagger UI доступен по /docs.
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -16,6 +20,11 @@ from .routers import (
 )
 from . import web
 
+## @brief Возвращает значение демонстрационной заглушки.
+#
+# Функция не подключена к HTTP-маршрутам и не участвует в доставке.
+#
+# @return Всегда False.
 def feature():
     # GOOD CODE
     return False
@@ -46,6 +55,11 @@ app.include_router(admin_users.router, prefix=PREFIX)
 app.include_router(admin_nodes.router, prefix=PREFIX)
 
 
+## @brief Возвращает признак доступности HTTP-приложения.
+#
+# Обрабатывает /health; соединение с БД здесь не проверяется.
+#
+# @return Словарь со значением status="ok".
 @app.get("/health", include_in_schema=False)
 def health():
     return {"status": "ok"}

@@ -1,3 +1,7 @@
+## @file
+# @brief Начальная миграция схемы ИСУДО.
+#
+# Создаёт таблицы, индексы, типы ENUM и начальные справочники. Идентификатор ревизии: 0001_initial.
 """initial schema + dictionaries
 
 Revision ID: 0001_initial
@@ -14,6 +18,11 @@ branch_labels = None
 depends_on = None
 
 
+## @brief Создаёт начальную схему и справочники.
+#
+# Создаёт ENUM, таблицы, внешние ключи и индексы; заполняет типы отправлений и документов.
+#
+# @note Возвращает None; схема и справочники изменяются в БД.
 def upgrade() -> None:
     bind = op.get_bind()
 
@@ -164,6 +173,11 @@ def upgrade() -> None:
     )
 
 
+## @brief Удаляет объекты начальной миграции.
+#
+# Удаляет таблицы, индексы и ENUM в обратном порядке зависимостей. Откат уничтожает данные этих таблиц.
+#
+# @note Возвращает None; объекты схемы удаляются.
 def downgrade() -> None:
     op.drop_table("shipment_documents")
     op.drop_index("ix_events_shipment", table_name="shipment_events")

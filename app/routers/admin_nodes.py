@@ -1,3 +1,7 @@
+## @file
+# @brief Административные операции с узлами доставки.
+#
+# Роутер требует роль ADMIN. Поддерживает создание, редактирование и деактивацию без удаления истории.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
@@ -15,6 +19,14 @@ from .nodes import node_to_schema
 router = APIRouter(tags=["Администрирование узлов"], dependencies=[Depends(require_roles(Role.ADMIN))])
 
 
+## @brief Создаёт активный узел доставки.
+#
+# Сохраняет название, тип и адрес; устанавливает заголовок Location.
+#
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param response HTTP-ответ для установки заголовков или cookie.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Созданная карточка Node; HTTP 201.
 @router.post("/admin/nodes", response_model=NodeSchema, status_code=201)
 def create_node(payload: NodeCreate, response: Response, db: Annotated[Session, Depends(get_db)]):
     node = Node(name=payload.name, type=payload.type, address=payload.address, active=True)
@@ -25,6 +37,15 @@ def create_node(payload: NodeCreate, response: Response, db: Annotated[Session, 
     return node_to_schema(node)
 
 
+## @brief Изменяет активный узел доставки.
+#
+# При смене типа узла отвязывает и блокирует назначенных сотрудников. Деактивированный узел не редактируется.
+#
+# @param nodeId Идентификатор узла.
+# @param payload Проверенная Pydantic-модель тела запроса.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Обновлённая карточка Node.
+# @exception errors.APIError 404 при отсутствии узла; 409 при попытке изменить неактивный узел.
 @router.patch("/admin/nodes/{nodeId}", response_model=NodeSchema)
 def update_node(nodeId: int, payload: NodeUpdate, db: Annotated[Session, Depends(get_db)]):
     node = db.get(Node, nodeId)
@@ -52,6 +73,14 @@ def update_node(nodeId: int, payload: NodeUpdate, db: Annotated[Session, Depends
     return node_to_schema(node)
 
 
+## @brief Деактивирует узел без удаления истории.
+#
+# Отклоняет запрос при невыданных отправлениях в узле или направленных в него. Повторный вызов возвращает текущую карточку.
+#
+# @param nodeId Идентификатор узла.
+# @param db Сессия SQLAlchemy текущего запроса.
+# @return Карточка неактивного узла.
+# @exception errors.APIError 404 при отсутствии узла; 409 при наличии активных отправлений.
 @router.post("/admin/nodes/{nodeId}/deactivate", response_model=NodeSchema)
 def deactivate_node(nodeId: int, db: Annotated[Session, Depends(get_db)]):
     node = db.get(Node, nodeId)

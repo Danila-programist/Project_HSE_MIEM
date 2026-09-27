@@ -1,0 +1,43 @@
+/**
+@page delivery Роли и операции доставки
+
+| Роль | Назначение |
+| --- | --- |
+| Клиент | Публичное отслеживание по трек-номеру |
+| OPERATOR | Оформление, приём, отправка, прибытие в пункт назначения, выдача |
+| SORTING_EMPLOYEE | Прибытие в сортировочный центр и отправка дальше |
+| ADMIN | Управление сотрудниками и узлами |
+
+@section transitions Переходы состояния
+| Исходное состояние | Операция API | Результат |
+| --- | --- | --- |
+| Нет отправления | `POST /api/v1/shipments` | CREATED |
+| CREATED | `POST /api/v1/shipments/{id}/accept` | ACCEPTED |
+| ACCEPTED или ARRIVED | `POST /api/v1/shipments/{id}/dispatch` | DISPATCHED |
+| DISPATCHED | `POST /api/v1/shipments/{id}/arrive` | ARRIVED в центре или READY_FOR_PICKUP в пункте назначения |
+| READY_FOR_PICKUP | `POST /api/v1/shipments/{id}/issue` | ISSUED |
+
+Следующим узлом может быть активный сортировочный центр или пункт назначения.
+Прибытие регистрирует сотрудник выбранного следующего узла.
+Редактирование исходных данных разрешено оператору пункта приёма только
+в состоянии CREATED. После выдачи новые операции запрещены.
+
+@section operation_example Пример тела запроса приёма
+@code{.json}
+{
+  "senderDocument": {
+    "documentTypeId": 1,
+    "series": "0000",
+    "number": "000000"
+  }
+}
+@endcode
+Это вымышленные реквизиты для иллюстрации структуры запроса.
+См. operations.accept_shipment и schemas.AcceptRequest.
+
+@section errors Ответы об ошибках
+Ответ содержит `code`, `message` и при необходимости `fieldErrors`.
+Основные статусы: 400 — некорректный ввод, 401 — требуется вход,
+403 — недостаточно прав, 404 — запись не найдена, 409 — конфликт состояния.
+См. errors.APIError и errors.register_exception_handlers.
+*/

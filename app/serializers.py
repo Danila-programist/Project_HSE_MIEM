@@ -1,3 +1,7 @@
+## @file
+# @brief Преобразование ORM-записей в модели ответа.
+#
+# Формирует карточки, историю и публичное отслеживание; ограничивает передачу данных участников сортировщикам и клиентам.
 from .enums import OPERATION_NAMES, STATUS_NAMES
 from .models import Employee, Node, Shipment, ShipmentDocument, ShipmentEvent
 from .schemas import (
@@ -14,14 +18,32 @@ from .schemas import (
 )
 
 
+## @brief Формирует краткую ссылку на узел.
+#
+# Переносит идентификатор, название и тип без адреса и признака активности.
+#
+# @param node ORM-запись узла.
+# @return Модель NodeRef.
 def node_ref(node: Node) -> NodeRef:
     return NodeRef(id=node.id, name=node.name, type=node.type)
 
 
+## @brief Формирует элемент справочника.
+#
+# Читает атрибуты id, code и name ORM-объекта.
+#
+# @param obj Запись справочника с id, code и name.
+# @return Модель DictionaryItem.
 def dict_item(obj) -> DictionaryItem:
     return DictionaryItem(id=obj.id, code=obj.code, name=obj.name)
 
 
+## @brief Собирает общую часть карточки отправления.
+#
+# Добавляет узлы, параметры и даты без ФИО и телефонов участников; Decimal преобразует в float.
+#
+# @param shipment ORM-запись отправления.
+# @return Словарь полей карточки.
 def _base_card(shipment: Shipment) -> dict:
     return dict(
         id=shipment.id,
@@ -45,6 +67,13 @@ def _base_card(shipment: Shipment) -> dict:
     )
 
 
+## @brief Формирует карточку с учётом роли читателя.
+#
+# Для оператора включает отправителя и получателя, для остальных оставляет эти поля равными None.
+#
+# @param shipment ORM-запись отправления.
+# @param for_operator Включать ли ФИО и телефоны участников.
+# @return Модель ShipmentCard.
 def shipment_card(shipment: Shipment, for_operator: bool) -> ShipmentCard:
     data = _base_card(shipment)
     if for_operator:
@@ -58,6 +87,12 @@ def shipment_card(shipment: Shipment, for_operator: bool) -> ShipmentCard:
     return ShipmentCard(**data)
 
 
+## @brief Формирует строку рабочего списка.
+#
+# Включает статус, узлы и время создания без персональных данных.
+#
+# @param shipment ORM-запись отправления.
+# @return Модель ShipmentListItem.
 def shipment_list_item(shipment: Shipment) -> ShipmentListItem:
     return ShipmentListItem(
         id=shipment.id,
@@ -72,6 +107,12 @@ def shipment_list_item(shipment: Shipment) -> ShipmentListItem:
     )
 
 
+## @brief Формирует служебное представление события.
+#
+# Добавляет русские названия операции и статуса, связанные узлы и сотрудника.
+#
+# @param event ORM-запись события доставки.
+# @return Модель ShipmentEvent из schemas.
 def shipment_event(event: ShipmentEvent) -> ShipmentEventSchema:
     return ShipmentEventSchema(
         id=event.id,
@@ -86,6 +127,12 @@ def shipment_event(event: ShipmentEvent) -> ShipmentEventSchema:
     )
 
 
+## @brief Формирует реквизиты записанного документа.
+#
+# Включает тип, серию, номер, время и имя записавшего сотрудника. Проверка прав выполняется вызывающим обработчиком.
+#
+# @param doc ORM-запись документа участника.
+# @return Модель RecordedDocument.
 def recorded_document(doc: ShipmentDocument) -> RecordedDocument:
     return RecordedDocument(
         documentType=dict_item(doc.document_type),
@@ -96,6 +143,13 @@ def recorded_document(doc: ShipmentDocument) -> RecordedDocument:
     )
 
 
+## @brief Формирует публичный результат отслеживания.
+#
+# Исключает сведения об участниках и сотрудниках. Порядок переданных событий сохраняется.
+#
+# @param shipment ORM-запись отправления.
+# @param events События в требуемом порядке вывода.
+# @return Модель PublicTracking.
 def public_tracking(shipment: Shipment, events: list[ShipmentEvent]) -> PublicTracking:
     return PublicTracking(
         trackNumber=shipment.track_number,
@@ -115,6 +169,12 @@ def public_tracking(shipment: Shipment, events: list[ShipmentEvent]) -> PublicTr
     )
 
 
+## @brief Собирает административные сведения о сотруднике.
+#
+# Включает роль, узел и блокировку, но не хеш пароля.
+#
+# @param emp ORM-запись сотрудника.
+# @return Словарь полей модели User.
 def employee_to_user_payload(emp: Employee) -> dict:
     return dict(
         id=emp.id,
