@@ -1,48 +1,24 @@
 import itertools
-import os
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.db import Base, get_db
+from app.db import get_db
 from app.enums import NodeType
 from app.main import app
 from app.models import DocumentType, Employee, Node, ShipmentType
 from app.security import hash_password
-
-TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql+psycopg://isudo:isudo@localhost:5432/isudo_test",
-)
+from tests.fake_db import FakeSession
 
 _counter = itertools.count(1)
 
 
-@pytest.fixture(scope="session")
-def engine():
-    eng = create_engine(TEST_DATABASE_URL, future=True)
-    Base.metadata.drop_all(eng)
-    Base.metadata.create_all(eng)
-    yield eng
-    eng.dispose()
-
-
 @pytest.fixture()
-def db_session(engine):
-    connection = engine.connect()
-    outer_trans = connection.begin()
-    SessionFactory = sessionmaker(
-        bind=connection, autoflush=False, autocommit=False, expire_on_commit=False, future=True
-    )
-    session = SessionFactory()
-
+def db_session():
+    """Фейковая сессия в памяти: каждый тест получает пустое хранилище."""
+    session = FakeSession()
     yield session
-
     session.close()
-    outer_trans.rollback()
-    connection.close()
 
 
 @pytest.fixture()
