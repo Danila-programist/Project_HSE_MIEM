@@ -1,7 +1,8 @@
 ## @file
 # @brief Единый формат ошибок API.
 #
-# Фабрики создают APIError, а зарегистрированные обработчики преобразуют исключения в JSON с HTTP-статусом.
+# Фабрики создают APIError, а зарегистрированные обработчики преобразуют исключения в JSON с
+# HTTP-статусом.
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -14,7 +15,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 class APIError(Exception):
     ## @brief Создаёт прикладную ошибку API.
     #
-    # Сохраняет HTTP-статус, машинный код, сообщение и необязательные ошибки полей для JSON-обработчика.
+    # Сохраняет HTTP-статус, машинный код, сообщение и необязательные ошибки полей для
+    # JSON-обработчика.
     #
     # @param self Экземпляр класса.
     # @param status_code HTTP-статус ошибки.
@@ -81,7 +83,9 @@ def conflict(code: str, msg: str) -> APIError:
 # @param msg Сообщение для пользователя.
 # @param field_errors Ошибки отдельных полей или None.
 # @return APIError со статусом 400 и кодом VALIDATION_ERROR.
-def validation_error(msg: str = "Проверьте заполнение формы", field_errors: list | None = None) -> APIError:
+def validation_error(
+    msg: str = "Проверьте заполнение формы", field_errors: list | None = None
+) -> APIError:
     return APIError(400, "VALIDATION_ERROR", msg, field_errors)
 
 
@@ -111,7 +115,8 @@ def _payload(code: str, message: str, field_errors: list | None = None) -> dict:
 
 ## @brief Регистрирует обработчики исключений FastAPI.
 #
-# Устанавливает единый JSON-формат для APIError, ошибок валидации, HTTPException и остальных исключений.
+# Устанавливает единый JSON-формат для APIError, ошибок валидации, HTTPException и остальных
+# исключений.
 #
 # @param app Приложение FastAPI.
 # @note Возвращает None; обработчики добавляются в приложение.
@@ -142,7 +147,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         field_errors = []
         for err in exc.errors():
             loc = [str(p) for p in err.get("loc", []) if p not in ("body", "query", "path")]
-            field_errors.append({"field": ".".join(loc) or "body", "message": err.get("msg", "Некорректное значение")})
+            field_errors.append(
+                {
+                    "field": ".".join(loc) or "body",
+                    "message": err.get("msg", "Некорректное значение"),
+                }
+            )
         return JSONResponse(
             status_code=400,
             content=_payload("VALIDATION_ERROR", "Проверьте заполнение формы", field_errors),
@@ -158,12 +168,19 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException):
         if exc.status_code == 401:
-            return JSONResponse(status_code=401, content=_payload("UNAUTHORIZED", "Требуется вход в систему"))
+            return JSONResponse(
+                status_code=401, content=_payload("UNAUTHORIZED", "Требуется вход в систему")
+            )
         if exc.status_code == 403:
-            return JSONResponse(status_code=403, content=_payload("FORBIDDEN", "Недостаточно прав для выполнения операции"))
+            return JSONResponse(
+                status_code=403,
+                content=_payload("FORBIDDEN", "Недостаточно прав для выполнения операции"),
+            )
         if exc.status_code == 404:
             return JSONResponse(status_code=404, content=_payload("NOT_FOUND", "Запись не найдена"))
-        return JSONResponse(status_code=exc.status_code, content=_payload("INTERNAL_ERROR", "Внутренняя ошибка"))
+        return JSONResponse(
+            status_code=exc.status_code, content=_payload("INTERNAL_ERROR", "Внутренняя ошибка")
+        )
 
     ## @brief Формирует ответ на необработанное исключение.
     #

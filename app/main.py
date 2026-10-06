@@ -1,12 +1,14 @@
 ## @file
 # @brief Точка сборки приложения FastAPI.
 #
-# Подключает API под /api/v1, HTML-страницы, статические файлы и обработчики ошибок. Swagger UI доступен по /docs.
+# Подключает API под /api/v1, HTML-страницы, статические файлы и обработчики ошибок. Swagger UI
+# доступен по /docs.
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from . import web
 from .errors import register_exception_handlers
 from .routers import (
     admin_nodes,
@@ -18,7 +20,6 @@ from .routers import (
     public,
     shipments,
 )
-from . import web
 
 app = FastAPI(
     title="ИСУДО — Информационная система управления доставкой отправлений",

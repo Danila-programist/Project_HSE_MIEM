@@ -1,7 +1,8 @@
 ## @file
 # @brief Преобразование ORM-записей в модели ответа.
 #
-# Формирует карточки, историю и публичное отслеживание; ограничивает передачу данных участников сортировщикам и клиентам.
+# Формирует карточки, историю и публичное отслеживание; ограничивает передачу данных участников
+# сортировщикам и клиентам.
 from .enums import OPERATION_NAMES, STATUS_NAMES
 from .models import Employee, Node, Shipment, ShipmentDocument, ShipmentEvent
 from .schemas import (
@@ -12,9 +13,11 @@ from .schemas import (
     PublicTracking,
     RecordedDocument,
     ShipmentCard,
-    ShipmentEvent as ShipmentEventSchema,
     ShipmentEventEmployee,
     ShipmentListItem,
+)
+from .schemas import (
+    ShipmentEvent as ShipmentEventSchema,
 )
 
 
@@ -77,7 +80,9 @@ def _base_card(shipment: Shipment) -> dict:
 def shipment_card(shipment: Shipment, for_operator: bool) -> ShipmentCard:
     data = _base_card(shipment)
     if for_operator:
-        data["sender"] = Participant(fullName=shipment.sender_full_name, phone=shipment.sender_phone)
+        data["sender"] = Participant(
+            fullName=shipment.sender_full_name, phone=shipment.sender_phone
+        )
         data["recipient"] = Participant(
             fullName=shipment.recipient_full_name, phone=shipment.recipient_phone
         )
@@ -129,7 +134,8 @@ def shipment_event(event: ShipmentEvent) -> ShipmentEventSchema:
 
 ## @brief Формирует реквизиты записанного документа.
 #
-# Включает тип, серию, номер, время и имя записавшего сотрудника. Проверка прав выполняется вызывающим обработчиком.
+# Включает тип, серию, номер, время и имя записавшего сотрудника. Проверка прав выполняется
+# вызывающим обработчиком.
 #
 # @param doc ORM-запись документа участника.
 # @return Модель RecordedDocument.

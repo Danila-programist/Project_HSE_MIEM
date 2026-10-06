@@ -1,7 +1,8 @@
 ## @file
 # @brief Контракты запросов и ответов API на Pydantic.
 #
-# Входные модели проверяют обязательные поля и ограничения. Ответы используют camelCase; модели Page задают пагинацию.
+# Входные модели проверяют обязательные поля и ограничения. Ответы используют camelCase; модели Page
+# задают пагинацию.
 from __future__ import annotations
 
 from datetime import datetime
@@ -134,7 +135,9 @@ class UserUpdate(BaseModel):
     ## @brief Настройки чтения и проверки модели Pydantic.
     model_config = ConfigDict(extra="forbid")
     ## @brief Уникальный логин сотрудника.
-    login: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=r"^[A-Za-z0-9._\-]+$")
+    login: Optional[str] = Field(
+        default=None, min_length=3, max_length=50, pattern=r"^[A-Za-z0-9._\-]+$"
+    )
     ## @brief ФИО.
     fullName: Optional[str] = Field(default=None, min_length=1, max_length=200)
     ## @brief Служебная роль сотрудника.
@@ -235,7 +238,8 @@ class ParticipantDocument(BaseModel):
 
 ## @brief Запрос оформления отправления.
 #
-# Содержит участников, назначение, тип, положительные массу и габариты; пункт приёма определяется по оператору.
+# Содержит участников, назначение, тип, положительные массу и габариты; пункт приёма определяется по
+# оператору.
 class ShipmentCreate(BaseModel):
     ## @brief Сведения об отправителе.
     sender: Participant
@@ -259,7 +263,8 @@ class ShipmentCreate(BaseModel):
 
 ## @brief Частичное исправление отправления.
 #
-# Допускается только до приёма; отсутствующие поля не изменяются, description можно очистить значением None.
+# Допускается только до приёма; отсутствующие поля не изменяются, description можно очистить
+# значением None.
 class ShipmentUpdate(BaseModel):
     ## @brief Настройки чтения и проверки модели Pydantic.
     model_config = ConfigDict(extra="forbid")

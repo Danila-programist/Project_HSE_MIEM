@@ -1,7 +1,8 @@
 ## @file
 # @brief Модели хранения данных SQLAlchemy.
 #
-# Описывает таблицы, внешние ключи и ORM-связи. Схема создаётся миграцией alembic/versions/0001_initial.py.
+# Описывает таблицы, внешние ключи и ORM-связи. Схема создаётся миграцией
+# alembic/versions/0001_initial.py.
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,9 +27,15 @@ from .enums import DocumentKind, NodeType, Operation, Role, ShipmentStatus
 
 _node_type = PGEnum(NodeType, name="node_type", values_callable=lambda e: [x.value for x in e])
 _role = PGEnum(Role, name="employee_role", values_callable=lambda e: [x.value for x in e])
-_status = PGEnum(ShipmentStatus, name="shipment_status", values_callable=lambda e: [x.value for x in e])
-_operation = PGEnum(Operation, name="shipment_operation", values_callable=lambda e: [x.value for x in e])
-_doc_kind = PGEnum(DocumentKind, name="document_kind", values_callable=lambda e: [x.value for x in e])
+_status = PGEnum(
+    ShipmentStatus, name="shipment_status", values_callable=lambda e: [x.value for x in e]
+)
+_operation = PGEnum(
+    Operation, name="shipment_operation", values_callable=lambda e: [x.value for x in e]
+)
+_doc_kind = PGEnum(
+    DocumentKind, name="document_kind", values_callable=lambda e: [x.value for x in e]
+)
 
 
 ## @brief Узел доставки.
@@ -47,12 +54,15 @@ class Node(Base):
     ## @brief Адрес узла.
     address: Mapped[str] = mapped_column(String(500), nullable=False)
     ## @brief Доступен ли узел для выбора в новых операциях.
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
 
 
 ## @brief Учётная запись сотрудника.
 #
-# Хранит уникальный логин, хеш пароля, роль и необязательную связь с узлом. Блокировка проверяется на служебных запросах.
+# Хранит уникальный логин, хеш пароля, роль и необязательную связь с узлом. Блокировка проверяется
+# на служебных запросах.
 class Employee(Base):
     ## @brief Имя таблицы PostgreSQL.
     __tablename__ = "employees"
@@ -68,9 +78,13 @@ class Employee(Base):
     ## @brief Служебная роль сотрудника.
     role: Mapped[Role] = mapped_column(_role, nullable=False)
     ## @brief Идентификатор связанного узла.
-    node_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=True)
+    node_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("nodes.id"), nullable=True
+    )
     ## @brief Признак блокировки учётной записи.
-    blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    blocked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     ## @brief Время создания записи с часовым поясом.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -131,7 +145,8 @@ class DocumentType(Base):
 
 ## @brief Отправление и его текущее состояние.
 #
-# Хранит параметры, данные участников, четыре ссылки на узлы и даты. История и документы вынесены в отдельные таблицы.
+# Хранит параметры, данные участников, четыре ссылки на узлы и даты. История и документы вынесены в
+# отдельные таблицы.
 class Shipment(Base):
     ## @brief Имя таблицы PostgreSQL.
     __tablename__ = "shipments"
@@ -143,15 +158,21 @@ class Shipment(Base):
     ## @brief Текущее состояние отправления.
     status: Mapped[ShipmentStatus] = mapped_column(_status, nullable=False)
     ## @brief Идентификатор типа отправления.
-    shipment_type_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("shipment_types.id"), nullable=False)
+    shipment_type_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("shipment_types.id"), nullable=False
+    )
     ## @brief Идентификатор пункта приёма.
     origin_node_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=False)
     ## @brief Идентификатор пункта назначения.
-    destination_node_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=False)
+    destination_node_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("nodes.id"), nullable=False
+    )
     ## @brief Идентификатор последнего зарегистрированного узла.
     current_node_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=False)
     ## @brief Идентификатор следующего узла; None, если не назначен.
-    next_node_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=True)
+    next_node_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("nodes.id"), nullable=True
+    )
     ## @brief Адрес пункта назначения на момент оформления или исправления.
     delivery_address: Mapped[str] = mapped_column(String(500), nullable=False)
 
@@ -189,11 +210,15 @@ class Shipment(Base):
     ## @brief Пункт приёма.
     origin_node: Mapped[Node] = relationship("Node", foreign_keys=[origin_node_id], lazy="joined")
     ## @brief Пункт назначения.
-    destination_node: Mapped[Node] = relationship("Node", foreign_keys=[destination_node_id], lazy="joined")
+    destination_node: Mapped[Node] = relationship(
+        "Node", foreign_keys=[destination_node_id], lazy="joined"
+    )
     ## @brief Последний зарегистрированный узел.
     current_node: Mapped[Node] = relationship("Node", foreign_keys=[current_node_id], lazy="joined")
     ## @brief Следующий узел либо None.
-    next_node: Mapped[Optional[Node]] = relationship("Node", foreign_keys=[next_node_id], lazy="joined")
+    next_node: Mapped[Optional[Node]] = relationship(
+        "Node", foreign_keys=[next_node_id], lazy="joined"
+    )
 
 
 ## @brief Событие истории доставки.
@@ -206,7 +231,9 @@ class ShipmentEvent(Base):
     ## @brief Уникальный идентификатор записи.
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     ## @brief Идентификатор отправления.
-    shipment_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("shipments.id"), nullable=False, index=True)
+    shipment_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("shipments.id"), nullable=False, index=True
+    )
     ## @brief Выполненная операция доставки.
     operation: Mapped[Operation] = mapped_column(_operation, nullable=False)
     ## @brief Состояние после операции.
@@ -214,7 +241,9 @@ class ShipmentEvent(Base):
     ## @brief Идентификатор связанного узла.
     node_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=False)
     ## @brief Идентификатор следующего узла; None, если не назначен.
-    next_node_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("nodes.id"), nullable=True)
+    next_node_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("nodes.id"), nullable=True
+    )
     ## @brief Идентификатор сотрудника.
     employee_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
     ## @brief Время события с часовым поясом.
@@ -225,7 +254,9 @@ class ShipmentEvent(Base):
     ## @brief Связанный узел.
     node: Mapped[Node] = relationship("Node", foreign_keys=[node_id], lazy="joined")
     ## @brief Следующий узел либо None.
-    next_node: Mapped[Optional[Node]] = relationship("Node", foreign_keys=[next_node_id], lazy="joined")
+    next_node: Mapped[Optional[Node]] = relationship(
+        "Node", foreign_keys=[next_node_id], lazy="joined"
+    )
     ## @brief Исполнитель операции.
     employee: Mapped[Employee] = relationship("Employee", lazy="joined")
 
@@ -246,7 +277,9 @@ class ShipmentDocument(Base):
     ## @brief Документ отправителя или получателя.
     kind: Mapped[DocumentKind] = mapped_column(_doc_kind, nullable=False)
     ## @brief Идентификатор типа документа.
-    document_type_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("document_types.id"), nullable=False)
+    document_type_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("document_types.id"), nullable=False
+    )
     ## @brief Серия документа при наличии.
     series: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     ## @brief Номер документа.
@@ -256,7 +289,9 @@ class ShipmentDocument(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     ## @brief Идентификатор записавшего сотрудника.
-    recorded_by_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
+    recorded_by_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("employees.id"), nullable=False
+    )
 
     ## @brief Тип документа из справочника.
     document_type: Mapped[DocumentType] = relationship("DocumentType", lazy="joined")

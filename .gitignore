@@ -5,3 +5,9 @@ app/routers/__pycache__/
 
 # Generated Doxygen documentation
 build/doxygen/
+
+# Local environment and generated code metrics
+.venv-metrics/
+.venv-semgrep/
+reports/metrics/
+scripts/__pycache__/

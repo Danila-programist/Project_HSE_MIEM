@@ -1,7 +1,8 @@
 ## @file
 # @brief Управление учётными записями сотрудников.
 #
-# Роутер требует ADMIN; проверяет соответствие роли типу узла и сохраняет последнего активного администратора.
+# Роутер требует ADMIN; проверяет соответствие роли типу узла и сохраняет последнего активного
+# администратора.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -17,7 +18,9 @@ from ..schemas import PasswordSet, User, UserCreate, UserPage, UserUpdate
 from ..security import hash_password
 from ..serializers import employee_to_user_payload
 
-router = APIRouter(tags=["Администрирование сотрудников"], dependencies=[Depends(require_roles(Role.ADMIN))])
+router = APIRouter(
+    tags=["Администрирование сотрудников"], dependencies=[Depends(require_roles(Role.ADMIN))]
+)
 
 
 ## @brief Преобразует сотрудника в административную карточку.
@@ -40,7 +43,9 @@ def _user(emp: Employee) -> User:
 # @param require Требовать ли обязательное назначение узла.
 # @return Идентификатор подходящего узла либо None.
 # @exception errors.APIError 400 при отсутствии или несовместимости узла.
-def _validate_role_node(db: Session, role: Role, node_id: int | None, *, require: bool) -> int | None:
+def _validate_role_node(
+    db: Session, role: Role, node_id: int | None, *, require: bool
+) -> int | None:
     if role == Role.ADMIN:
         return None
     if node_id is None:
@@ -71,14 +76,17 @@ def _validate_role_node(db: Session, role: Role, node_id: int | None, *, require
 
 ## @brief Считает активных администраторов.
 #
-# При необходимости исключает одного сотрудника для проверки возможности изменения его роли или блокировки.
+# При необходимости исключает одного сотрудника для проверки возможности изменения его роли или
+# блокировки.
 #
 # @param db Сессия SQLAlchemy текущего запроса.
 # @param exclude_id Идентификатор исключаемого сотрудника или None.
 # @return Количество незаблокированных администраторов.
 def _active_admin_count(db: Session, exclude_id: int | None = None) -> int:
-    stmt = select(func.count()).select_from(Employee).where(
-        Employee.role == Role.ADMIN, Employee.blocked.is_(False)
+    stmt = (
+        select(func.count())
+        .select_from(Employee)
+        .where(Employee.role == Role.ADMIN, Employee.blocked.is_(False))
     )
     if exclude_id is not None:
         stmt = stmt.where(Employee.id != exclude_id)
@@ -110,7 +118,9 @@ def list_users(
         stmt = stmt.where(Employee.blocked == blocked)
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    rows = db.execute(stmt.order_by(Employee.id).offset((page - 1) * size).limit(size)).scalars().all()
+    rows = (
+        db.execute(stmt.order_by(Employee.id).offset((page - 1) * size).limit(size)).scalars().all()
+    )
 
     return UserPage(
         page=page,
@@ -135,7 +145,9 @@ def create_user(payload: UserCreate, response: Response, db: Annotated[Session, 
     if db.scalar(select(Employee).where(Employee.login == payload.login)):
         raise conflict("LOGIN_ALREADY_EXISTS", "Сотрудник с таким логином уже существует")
 
-    node_id = _validate_role_node(db, payload.role, payload.nodeId, require=(payload.role != Role.ADMIN))
+    node_id = _validate_role_node(
+        db, payload.role, payload.nodeId, require=(payload.role != Role.ADMIN)
+    )
 
     emp = Employee(
         login=payload.login,
@@ -177,7 +189,8 @@ def get_user(userId: int, db: Annotated[Session, Depends(get_db)]):
 # @param payload Проверенная Pydantic-модель тела запроса.
 # @param db Сессия SQLAlchemy текущего запроса.
 # @return Обновлённая модель User.
-# @exception errors.APIError 404 при отсутствии сотрудника; 400 при неверном узле; 409 при конфликте логина или последнем администраторе.
+# @exception errors.APIError 404 при отсутствии сотрудника; 400 при неверном узле; 409 при конфликте
+# логина или последнем администраторе.
 @router.patch("/admin/users/{userId}", response_model=User)
 def update_user(userId: int, payload: UserUpdate, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
@@ -189,11 +202,17 @@ def update_user(userId: int, payload: UserUpdate, db: Annotated[Session, Depends
     new_node_id = data.get("nodeId", emp.node_id)
 
     if "login" in data and data["login"] != emp.login:
-        if db.scalar(select(Employee).where(Employee.login == data["login"], Employee.id != emp.id)):
+        if db.scalar(
+            select(Employee).where(Employee.login == data["login"], Employee.id != emp.id)
+        ):
             raise conflict("LOGIN_ALREADY_EXISTS", "Сотрудник с таким логином уже существует")
 
     role_changing_from_admin = emp.role == Role.ADMIN and (new_role != Role.ADMIN)
-    if role_changing_from_admin and not emp.blocked and _active_admin_count(db, exclude_id=emp.id) == 0:
+    if (
+        role_changing_from_admin
+        and not emp.blocked
+        and _active_admin_count(db, exclude_id=emp.id) == 0
+    ):
         raise conflict("LAST_ADMIN", "Нельзя лишить роли последнего активного администратора")
 
     if new_role == Role.ADMIN:
@@ -215,18 +234,24 @@ def update_user(userId: int, payload: UserUpdate, db: Annotated[Session, Depends
 
 ## @brief Блокирует сотрудника.
 #
-# Последний активный администратор защищён от блокировки. API проверит blocked при следующем запросе.
+# Последний активный администратор защищён от блокировки. API проверит blocked при следующем
+# запросе.
 #
 # @param userId Идентификатор сотрудника.
 # @param db Сессия SQLAlchemy текущего запроса.
 # @return Модель User с blocked=True.
-# @exception errors.APIError 404 при отсутствии сотрудника; 409 при блокировке последнего администратора.
+# @exception errors.APIError 404 при отсутствии сотрудника; 409 при блокировке последнего
+# администратора.
 @router.post("/admin/users/{userId}/block", response_model=User)
 def block_user(userId: int, db: Annotated[Session, Depends(get_db)]):
     emp = db.get(Employee, userId)
     if emp is None:
         raise not_found()
-    if emp.role == Role.ADMIN and not emp.blocked and _active_admin_count(db, exclude_id=emp.id) == 0:
+    if (
+        emp.role == Role.ADMIN
+        and not emp.blocked
+        and _active_admin_count(db, exclude_id=emp.id) == 0
+    ):
         raise conflict("LAST_ADMIN", "Нельзя заблокировать последнего активного администратора")
     emp.blocked = True
     db.commit()

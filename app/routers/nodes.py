@@ -13,7 +13,8 @@ from ..deps import CurrentUser
 from ..enums import NodeType
 from ..errors import not_found
 from ..models import Node
-from ..schemas import Node as NodeSchema, NodePage
+from ..schemas import Node as NodeSchema
+from ..schemas import NodePage
 
 router = APIRouter(tags=["Узлы"])
 

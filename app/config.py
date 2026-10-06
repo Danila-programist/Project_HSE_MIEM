@@ -1,7 +1,8 @@
 ## @file
 # @brief Настройки приложения из переменных окружения.
 #
-# Pydantic Settings читает окружение и необязательный файл .env; значения по умолчанию предназначены для разработки.
+# Pydantic Settings читает окружение и необязательный файл .env; значения по умолчанию предназначены
+# для разработки.
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

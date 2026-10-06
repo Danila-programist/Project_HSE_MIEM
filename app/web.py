@@ -1,7 +1,8 @@
 ## @file
 # @brief HTML-маршруты и подготовка контекста Jinja2.
 #
-# Отдаёт страницы /tracking, /login, /operator, /sorter и /admin. Полномочия API проверяются отдельно в deps.
+# Отдаёт страницы /tracking, /login, /operator, /sorter и /admin. Полномочия API проверяются
+# отдельно в deps.
 from pathlib import Path
 from typing import Annotated
 
@@ -21,7 +22,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 ## @brief Находит сотрудника для HTML-страницы.
 #
-# Проверяет наличие сессии и блокировку сотрудника. В отличие от API-зависимости, срок сессии здесь не проверяется.
+# Проверяет наличие сессии и блокировку сотрудника. В отличие от API-зависимости, срок сессии здесь
+# не проверяется.
 #
 # @param request Входящий HTTP-запрос.
 # @param db Сессия SQLAlchemy текущего запроса.

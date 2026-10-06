@@ -1,7 +1,8 @@
 ## @file
 # @brief Административные операции с узлами доставки.
 #
-# Роутер требует роль ADMIN. Поддерживает создание, редактирование и деактивацию без удаления истории.
+# Роутер требует роль ADMIN. Поддерживает создание, редактирование и деактивацию без удаления
+# истории.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
@@ -13,10 +14,13 @@ from ..deps import require_roles
 from ..enums import Role, ShipmentStatus
 from ..errors import conflict, not_found
 from ..models import Employee, Node, Shipment
-from ..schemas import Node as NodeSchema, NodeCreate, NodeUpdate
+from ..schemas import Node as NodeSchema
+from ..schemas import NodeCreate, NodeUpdate
 from .nodes import node_to_schema
 
-router = APIRouter(tags=["Администрирование узлов"], dependencies=[Depends(require_roles(Role.ADMIN))])
+router = APIRouter(
+    tags=["Администрирование узлов"], dependencies=[Depends(require_roles(Role.ADMIN))]
+)
 
 
 ## @brief Создаёт активный узел доставки.
@@ -39,7 +43,8 @@ def create_node(payload: NodeCreate, response: Response, db: Annotated[Session, 
 
 ## @brief Изменяет активный узел доставки.
 #
-# При смене типа узла отвязывает и блокирует назначенных сотрудников. Деактивированный узел не редактируется.
+# При смене типа узла отвязывает и блокирует назначенных сотрудников. Деактивированный узел не
+# редактируется.
 #
 # @param nodeId Идентификатор узла.
 # @param payload Проверенная Pydantic-модель тела запроса.
@@ -75,7 +80,8 @@ def update_node(nodeId: int, payload: NodeUpdate, db: Annotated[Session, Depends
 
 ## @brief Деактивирует узел без удаления истории.
 #
-# Отклоняет запрос при невыданных отправлениях в узле или направленных в него. Повторный вызов возвращает текущую карточку.
+# Отклоняет запрос при невыданных отправлениях в узле или направленных в него. Повторный вызов
+# возвращает текущую карточку.
 #
 # @param nodeId Идентификатор узла.
 # @param db Сессия SQLAlchemy текущего запроса.
