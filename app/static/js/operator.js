@@ -4,6 +4,8 @@
 
   const listBody = document.getElementById('shipments-body');
   const detailEl = document.getElementById('detail');
+  const me = JSON.parse(document.getElementById('page-data').textContent).user;
+  const myNodeId = me.node ? me.node.id : null;
 
   async function loadList() {
     const params = new URLSearchParams({ page, size, direction: 'ALL' });
@@ -50,6 +52,12 @@
           <button class="primary" id="dispatch-btn">Отправить в следующий узел</button>
         </div>
       </div>`);
+    } else if (s.status === 'DISPATCHED' && s.nextNode && s.nextNode.id === myNodeId) {
+      actions.push(`<div class="card"><h2>Регистрация прибытия</h2>
+        <div class="row"><span class="spacer"></span>
+          <button class="primary" id="arrive-btn">Зарегистрировать прибытие</button>
+        </div>
+      </div>`);
     } else if (s.status === 'READY_FOR_PICKUP') {
       actions.push(`<div class="card"><h2>Выдача отправления</h2>
         <div class="grid2">
@@ -93,6 +101,9 @@
     }
     if (document.getElementById('dispatch-btn')) {
       wireDispatch(s.id, s);
+    }
+    if (document.getElementById('arrive-btn')) {
+      wireArrive(s.id);
     }
     if (document.getElementById('issue-btn')) {
       wireIssue(s.id);
@@ -143,6 +154,17 @@
     });
   }
 
+  function wireArrive(id) {
+    document.getElementById('arrive-btn').addEventListener('click', async () => {
+      try {
+        const s = await api('POST', `/shipments/${id}/arrive`);
+        renderCard(s);
+        loadList().catch(() => {});
+        toast('Прибытие зарегистрировано');
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  }
+
   function wireIssue(id) {
     document.getElementById('issue-btn').addEventListener('click', async () => {
       try {
@@ -170,8 +192,6 @@
       api('GET', '/nodes?active=true&type=SERVICE_POINT&size=100'),
       api('GET', '/dictionaries/shipment-types'),
     ]);
-    const me = JSON.parse(document.getElementById('page-data').textContent).user;
-    const myNodeId = me.node ? me.node.id : null;
     const nodeSel = form.querySelector('[name="destinationNodeId"]');
     const typeSel = form.querySelector('[name="shipmentTypeId"]');
     form.reset();
