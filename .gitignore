@@ -10,4 +10,5 @@ build/doxygen/
 .venv-metrics/
 .venv-semgrep/
 reports/metrics/
+reports/semgrep/
 scripts/__pycache__/

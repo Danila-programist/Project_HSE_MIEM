@@ -10,7 +10,12 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-RUN chmod +x /app/entrypoint.sh
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid app --no-create-home \
+        --shell /usr/sbin/nologin app \
+    && chmod +x /app/entrypoint.sh
+
+USER app:app
 
 EXPOSE 8000
 

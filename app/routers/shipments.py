@@ -386,8 +386,9 @@ def update_shipment(
 ):
     if user.role != Role.OPERATOR or user.node_id is None:
         raise forbidden()
+    # Joined relationships include nullable outer joins; lock only the shipment row.
     s = db.execute(
-        select(Shipment).where(Shipment.id == shipmentId).with_for_update()
+        select(Shipment).where(Shipment.id == shipmentId).with_for_update(of=Shipment)
     ).scalar_one_or_none()
     if s is None:
         raise not_found()

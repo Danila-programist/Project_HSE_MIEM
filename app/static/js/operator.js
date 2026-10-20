@@ -163,6 +163,7 @@
 
   const dialog = document.getElementById('create-dialog');
   const form = document.getElementById('create-form');
+  const createError = document.getElementById('create-error');
 
   async function openCreateDialog() {
     const [nodes, types] = await Promise.all([
@@ -174,6 +175,8 @@
     const nodeSel = form.querySelector('[name="destinationNodeId"]');
     const typeSel = form.querySelector('[name="shipmentTypeId"]');
     form.reset();
+    createError.hidden = true;
+    createError.textContent = '';
     nodeSel.innerHTML = nodes.items
       .filter((n) => n.id !== myNodeId)
       .map((n) => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('');
@@ -181,11 +184,15 @@
     dialog.showModal();
   }
 
-  document.getElementById('new-shipment-btn').addEventListener('click', openCreateDialog);
+  document.getElementById('new-shipment-btn').addEventListener('click', () => {
+    openCreateDialog().catch((err) => toast(err.message || 'Не удалось открыть форму оформления', 'error'));
+  });
   document.getElementById('create-cancel').addEventListener('click', () => dialog.close());
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    createError.hidden = true;
+    createError.textContent = '';
     const fd = new FormData(form);
     const payload = {
       sender: { fullName: fd.get('sender.fullName'), phone: fd.get('sender.phone') },
@@ -208,7 +215,9 @@
       loadList().catch(() => {});
     } catch (err) {
       const details = (err.fieldErrors || []).map((f) => `${f.field}: ${f.message}`).join('\n');
-      toast((err.message || 'Ошибка') + (details ? ' — ' + details : ''), 'error');
+      createError.textContent = (err.message || 'Ошибка') + (details ? ' — ' + details : '');
+      createError.hidden = false;
+      createError.scrollIntoView({ block: 'nearest' });
     }
   });
 

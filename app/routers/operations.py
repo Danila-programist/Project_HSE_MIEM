@@ -30,8 +30,9 @@ router = APIRouter(tags=["Операции"])
 # @return ORM-объект Shipment.
 # @exception errors.APIError 404 при отсутствии отправления.
 def _lock(db: Session, shipment_id: int) -> Shipment:
+    # Joined relationships include nullable outer joins; lock only the shipment row.
     s = db.execute(
-        select(Shipment).where(Shipment.id == shipment_id).with_for_update()
+        select(Shipment).where(Shipment.id == shipment_id).with_for_update(of=Shipment)
     ).scalar_one_or_none()
     if s is None:
         raise not_found()
